@@ -1,0 +1,854 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>AI Student Performance Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap');
+
+  :root {
+    --navy:    #1E2761;
+    --navy2:   #14205a;
+    --teal:    #0D7680;
+    --teal2:   #0a5c64;
+    --ice:     #CADCFC;
+    --blue:    #2563EB;
+    --white:   #FFFFFF;
+    --bg:      #F4F7FC;
+    --card:    #FFFFFF;
+    --dark:    #1A1A2E;
+    --muted:   #5A6480;
+    --border:  #E2E8F0;
+    --green:   #10B981;
+    --orange:  #F59E0B;
+    --red:     #EF4444;
+    --purple:  #6D28D9;
+    --shadow:  0 2px 16px rgba(30,39,97,0.10);
+    --shadow-lg: 0 8px 32px rgba(30,39,97,0.15);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Sora', sans-serif; background: var(--bg); color: var(--dark); min-height: 100vh; }
+
+  /* ── LOGIN ─────────────────────────────────────────────── */
+  #login-screen {
+    min-height: 100vh;
+    background: linear-gradient(135deg, var(--navy) 0%, #14205a 50%, #0a3a5c 100%);
+    display: flex; align-items: center; justify-content: center; flex-direction: column;
+    gap: 2rem; padding: 2rem;
+  }
+  .login-logo { text-align: center; }
+  .login-logo h1 { color: #fff; font-size: 2rem; font-weight: 700; letter-spacing: -0.03em; line-height: 1.1; }
+  .login-logo h1 span { color: var(--ice); }
+  .login-logo p { color: rgba(202,220,252,0.7); font-size: 0.85rem; margin-top: 0.4rem; }
+  .login-cards { display: flex; gap: 1.5rem; flex-wrap: wrap; justify-content: center; }
+  .login-card {
+    background: rgba(255,255,255,0.07); border: 1.5px solid rgba(202,220,252,0.2);
+    border-radius: 20px; padding: 2rem 2.5rem; cursor: pointer; text-align: center;
+    transition: all 0.25s ease; backdrop-filter: blur(10px); min-width: 180px;
+  }
+  .login-card:hover { background: rgba(255,255,255,0.14); transform: translateY(-4px); border-color: var(--ice); box-shadow: 0 16px 40px rgba(0,0,0,0.3); }
+  .login-card .icon { font-size: 2.5rem; margin-bottom: 0.75rem; }
+  .login-card h3 { color: #fff; font-size: 1.1rem; font-weight: 600; }
+  .login-card p { color: rgba(202,220,252,0.65); font-size: 0.78rem; margin-top: 0.3rem; }
+
+  /* ── LAYOUT ────────────────────────────────────────────── */
+  #app { display: none; min-height: 100vh; }
+
+  /* SIDEBAR */
+  .sidebar {
+    position: fixed; top: 0; left: 0; height: 100vh; width: 230px;
+    background: var(--navy); display: flex; flex-direction: column; z-index: 100;
+    padding: 0 0 1.5rem 0;
+  }
+  .sidebar-brand {
+    padding: 1.4rem 1.4rem 1rem;
+    border-bottom: 1px solid rgba(202,220,252,0.1);
+    font-size: 0.95rem; font-weight: 700; color: #fff; letter-spacing: -0.02em;
+    line-height: 1.2;
+  }
+  .sidebar-brand span { color: var(--ice); display: block; font-size: 0.7rem; font-weight: 400; margin-top: 0.2rem; opacity: 0.7; }
+  .sidebar-nav { flex: 1; padding: 1rem 0.75rem; display: flex; flex-direction: column; gap: 0.25rem; }
+  .nav-item {
+    display: flex; align-items: center; gap: 0.75rem; padding: 0.6rem 0.75rem;
+    border-radius: 10px; cursor: pointer; color: rgba(202,220,252,0.65);
+    font-size: 0.85rem; font-weight: 500; transition: all 0.15s ease;
+  }
+  .nav-item:hover { background: rgba(202,220,252,0.08); color: var(--ice); }
+  .nav-item.active { background: rgba(202,220,252,0.12); color: #fff; }
+  .nav-item .nav-icon { font-size: 1rem; width: 20px; text-align: center; }
+  .sidebar-user {
+    padding: 1rem 1.4rem 0;
+    border-top: 1px solid rgba(202,220,252,0.1);
+    display: flex; align-items: center; gap: 0.75rem;
+  }
+  .user-avatar {
+    width: 36px; height: 36px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--teal), var(--blue));
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-size: 0.85rem; font-weight: 700; flex-shrink: 0;
+  }
+  .user-info p { color: #fff; font-size: 0.82rem; font-weight: 600; }
+  .user-info span { color: rgba(202,220,252,0.5); font-size: 0.72rem; }
+  .logout-btn {
+    margin-left: auto; background: none; border: none; cursor: pointer;
+    color: rgba(202,220,252,0.4); font-size: 1rem; padding: 0.25rem;
+    transition: color 0.15s;
+  }
+  .logout-btn:hover { color: var(--ice); }
+
+  /* MAIN CONTENT */
+  .main { margin-left: 230px; min-height: 100vh; padding: 2rem; }
+  .page { display: none; }
+  .page.active { display: block; }
+
+  /* TOP BAR */
+  .page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.75rem; }
+  .page-header h2 { font-size: 1.5rem; font-weight: 700; color: var(--dark); letter-spacing: -0.03em; }
+  .page-header p { font-size: 0.82rem; color: var(--muted); margin-top: 0.2rem; }
+
+  /* CARDS */
+  .card { background: var(--card); border-radius: 16px; padding: 1.25rem 1.5rem; box-shadow: var(--shadow); border: 1px solid var(--border); }
+  .card-title { font-size: 0.75rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.6rem; }
+
+  /* STAT GRID */
+  .stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 1.5rem; }
+  .stat-card { background: var(--card); border-radius: 16px; padding: 1.2rem 1.4rem; box-shadow: var(--shadow); border: 1px solid var(--border); position: relative; overflow: hidden; }
+  .stat-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; }
+  .stat-card.navy::before { background: var(--navy); }
+  .stat-card.teal::before { background: var(--teal); }
+  .stat-card.green::before { background: var(--green); }
+  .stat-card.orange::before { background: var(--orange); }
+  .stat-card.red::before { background: var(--red); }
+  .stat-card.blue::before { background: var(--blue); }
+  .stat-label { font-size: 0.72rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.07em; }
+  .stat-value { font-size: 2rem; font-weight: 700; color: var(--dark); letter-spacing: -0.04em; margin: 0.2rem 0 0; line-height: 1; }
+  .stat-sub { font-size: 0.75rem; color: var(--muted); margin-top: 0.35rem; }
+  .stat-badge { display: inline-block; font-size: 0.68rem; font-weight: 600; padding: 0.15rem 0.5rem; border-radius: 20px; margin-top: 0.4rem; }
+  .badge-green { background: #d1fae5; color: #065f46; }
+  .badge-orange { background: #fef3c7; color: #92400e; }
+  .badge-red { background: #fee2e2; color: #991b1b; }
+  .badge-blue { background: #dbeafe; color: #1e40af; }
+
+  /* GRID LAYOUTS */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; margin-bottom: 1.25rem; }
+  .grid-3-2 { display: grid; grid-template-columns: 1.6fr 1fr; gap: 1.25rem; margin-bottom: 1.25rem; }
+  .grid-full { margin-bottom: 1.25rem; }
+
+  /* RISK METER */
+  .risk-meter { text-align: center; padding: 0.5rem 0; }
+  .risk-arc { position: relative; display: inline-block; margin: 0.5rem 0; }
+  .risk-label { font-size: 2rem; font-weight: 700; letter-spacing: -0.04em; }
+  .risk-label.low { color: var(--green); }
+  .risk-label.medium { color: var(--orange); }
+  .risk-label.high { color: var(--red); }
+  .risk-desc { font-size: 0.78rem; color: var(--muted); margin-top: 0.25rem; }
+
+  /* COURSE LIST */
+  .course-item { display: flex; align-items: center; gap: 1rem; padding: 0.75rem 0; border-bottom: 1px solid var(--border); }
+  .course-item:last-child { border-bottom: none; padding-bottom: 0; }
+  .course-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .course-name { flex: 1; font-size: 0.85rem; font-weight: 600; color: var(--dark); }
+  .course-grade-bar { flex: 2; background: var(--border); border-radius: 99px; height: 6px; overflow: hidden; }
+  .course-grade-fill { height: 100%; border-radius: 99px; transition: width 0.5s ease; }
+  .course-grade-text { font-family: 'DM Mono', monospace; font-size: 0.82rem; font-weight: 500; color: var(--dark); min-width: 38px; text-align: right; }
+  .course-trend { font-size: 0.7rem; min-width: 44px; text-align: right; }
+  .trend-up { color: var(--green); }
+  .trend-down { color: var(--red); }
+  .trend-flat { color: var(--muted); }
+
+  /* ALERTS / TIPS */
+  .alert-item { display: flex; gap: 0.75rem; padding: 0.85rem; border-radius: 12px; margin-bottom: 0.6rem; }
+  .alert-item:last-child { margin-bottom: 0; }
+  .alert-info { background: #eff6ff; border: 1px solid #bfdbfe; }
+  .alert-warn { background: #fffbeb; border: 1px solid #fde68a; }
+  .alert-success { background: #f0fdf4; border: 1px solid #bbf7d0; }
+  .alert-icon { font-size: 1.1rem; flex-shrink: 0; margin-top: 0.05rem; }
+  .alert-text p { font-size: 0.82rem; color: var(--dark); line-height: 1.45; }
+  .alert-text span { font-size: 0.72rem; color: var(--muted); display: block; margin-top: 0.2rem; }
+
+  /* ASSIGNMENTS TABLE */
+  .assign-table { width: 100%; border-collapse: collapse; }
+  .assign-table th { font-size: 0.7rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.07em; padding: 0.5rem 0.75rem; text-align: left; border-bottom: 1.5px solid var(--border); }
+  .assign-table td { font-size: 0.82rem; padding: 0.65rem 0.75rem; border-bottom: 1px solid var(--border); color: var(--dark); }
+  .assign-table tr:last-child td { border-bottom: none; }
+  .assign-table tr:hover td { background: var(--bg); }
+  .status-pill { display: inline-block; font-size: 0.68rem; font-weight: 600; padding: 0.18rem 0.55rem; border-radius: 20px; }
+  .pill-green { background: #d1fae5; color: #065f46; }
+  .pill-red { background: #fee2e2; color: #991b1b; }
+  .pill-yellow { background: #fef3c7; color: #92400e; }
+
+  /* ADVISOR STUDENT TABLE */
+  .student-table { width: 100%; border-collapse: collapse; }
+  .student-table th { font-size: 0.7rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.07em; padding: 0.6rem 1rem; text-align: left; background: var(--bg); border-bottom: 1.5px solid var(--border); }
+  .student-table th:first-child { border-radius: 8px 0 0 0; }
+  .student-table th:last-child { border-radius: 0 8px 0 0; }
+  .student-table td { font-size: 0.83rem; padding: 0.7rem 1rem; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  .student-table tr:last-child td { border-bottom: none; }
+  .student-table tr:hover td { background: #fafbff; }
+  .student-name { font-weight: 600; color: var(--dark); }
+  .student-id { font-size: 0.7rem; color: var(--muted); font-family: 'DM Mono', monospace; }
+  .risk-pill { display: inline-block; font-size: 0.7rem; font-weight: 700; padding: 0.2rem 0.65rem; border-radius: 20px; }
+  .risk-high { background: #fee2e2; color: #991b1b; }
+  .risk-medium { background: #fef3c7; color: #92400e; }
+  .risk-low { background: #d1fae5; color: #065f46; }
+  .mini-bar { background: var(--border); border-radius: 99px; height: 5px; width: 80px; overflow: hidden; display: inline-block; vertical-align: middle; }
+  .mini-fill { height: 100%; border-radius: 99px; }
+
+  /* CHART CONTAINERS */
+  .chart-wrap { position: relative; height: 200px; }
+  .chart-wrap-sm { position: relative; height: 160px; }
+
+  /* NOTIFICATION DOT */
+  .notif-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--red); margin-left: auto; }
+
+  /* BUTTONS */
+  .btn { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.5rem 1rem; border-radius: 10px; font-size: 0.8rem; font-weight: 600; cursor: pointer; border: none; transition: all 0.15s ease; font-family: 'Sora', sans-serif; }
+  .btn-navy { background: var(--navy); color: #fff; }
+  .btn-navy:hover { background: var(--navy2); }
+  .btn-outline { background: transparent; color: var(--navy); border: 1.5px solid var(--border); }
+  .btn-outline:hover { border-color: var(--navy); background: var(--bg); }
+  .btn-sm { padding: 0.35rem 0.75rem; font-size: 0.75rem; }
+
+  /* TABS */
+  .tab-bar { display: flex; gap: 0.25rem; background: var(--bg); border-radius: 12px; padding: 0.3rem; margin-bottom: 1.25rem; width: fit-content; }
+  .tab { padding: 0.45rem 1rem; border-radius: 9px; font-size: 0.82rem; font-weight: 600; cursor: pointer; color: var(--muted); transition: all 0.15s ease; }
+  .tab.active { background: #fff; color: var(--navy); box-shadow: 0 1px 4px rgba(30,39,97,0.12); }
+
+  /* SECTION DIVIDER */
+  .section-label { font-size: 0.72rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.75rem; }
+
+  /* RESPONSIVE */
+  @media (max-width: 900px) {
+    .stat-grid { grid-template-columns: repeat(2, 1fr); }
+    .grid-2, .grid-3-2 { grid-template-columns: 1fr; }
+    .sidebar { width: 60px; }
+    .sidebar-brand, .nav-item span, .user-info, .sidebar-user .logout-btn { display: none; }
+    .nav-item { justify-content: center; }
+    .main { margin-left: 60px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ── LOGIN SCREEN ────────────────────────────────────────── -->
+<div id="login-screen">
+  <div class="login-logo">
+    <h1>Student Performance <span>Dashboard</span></h1>
+    <p>AI-Powered Academic Decision-Making · Demo Version</p>
+  </div>
+  <div class="login-cards">
+    <div class="login-card" onclick="login('student')">
+      <div class="icon">🎓</div>
+      <h3>Student Login</h3>
+      <p>View your dashboard,<br>grades & insights</p>
+    </div>
+    <div class="login-card" onclick="login('advisor')">
+      <div class="icon">👩‍🏫</div>
+      <h3>Advisor Login</h3>
+      <p>Monitor students &<br>manage at-risk alerts</p>
+    </div>
+  </div>
+</div>
+
+<!-- ── APP SHELL ───────────────────────────────────────────── -->
+<div id="app">
+  <!-- SIDEBAR -->
+  <nav class="sidebar">
+    <div class="sidebar-brand">
+      AI Dashboard
+      <span id="sidebar-role-label">Student Portal</span>
+    </div>
+    <div class="sidebar-nav" id="sidebar-nav"></div>
+    <div class="sidebar-user">
+      <div class="user-avatar" id="sidebar-avatar">J</div>
+      <div class="user-info">
+        <p id="sidebar-name">Jordan Reyes</p>
+        <span id="sidebar-email">jordan@college.edu</span>
+      </div>
+      <button class="logout-btn" onclick="logout()" title="Log out">↩</button>
+    </div>
+  </nav>
+
+  <!-- MAIN -->
+  <main class="main" id="main-content"></main>
+</div>
+
+<script>
+// ── DATA ────────────────────────────────────────────────────
+const studentData = {
+  name: "Jordan Reyes", email: "jordan@college.edu", avatar: "JR", id: "STU-2024-0847",
+  gpa: 2.8, riskScore: "High", riskPct: 78, semester: "Spring 2025",
+  courses: [
+    { name: "Calculus II",      color: "#EF4444", grade: 66, prev: 78, trend: -12, code: "MATH 202" },
+    { name: "Business Writing", color: "#10B981", grade: 88, prev: 85, trend:  +3, code: "ENGL 215" },
+    { name: "Economics 101",    color: "#F59E0B", grade: 74, prev: 76, trend:  -2, code: "ECON 101" },
+    { name: "Intro to Python",  color: "#2563EB", grade: 91, prev: 89, trend:  +2, code: "CIS 110"  },
+    { name: "History 201",      color: "#6D28D9", grade: 71, prev: 73, trend:  -2, code: "HIST 201" },
+  ],
+  assignments: [
+    { name: "Calculus Homework 4", course: "MATH 202", due: "Apr 14", status: "Missing",   score: null   },
+    { name: "Calculus Homework 5", course: "MATH 202", due: "Apr 21", status: "Missing",   score: null   },
+    { name: "Business Memo Draft", course: "ENGL 215", due: "Apr 22", status: "Submitted", score: "91/100" },
+    { name: "Econ Quiz 3",         course: "ECON 101", due: "Apr 23", status: "Submitted", score: "74/100" },
+    { name: "Python Project 2",    course: "CIS 110",  due: "Apr 28", status: "Pending",   score: null   },
+    { name: "History Essay 2",     course: "HIST 201", due: "May 1",  status: "Pending",   score: null   },
+  ],
+  weeklyGrades: [82, 80, 79, 77, 75, 73, 70, 66],
+  labels: ["Feb 26","Mar 5","Mar 12","Mar 19","Mar 26","Apr 2","Apr 9","Apr 16"],
+  alerts: [
+    { type: "warn", icon: "⚠️", msg: "You've missed 2 Calculus assignments this week. Your grade has dropped 12 points since February.", time: "2 hours ago" },
+    { type: "info", icon: "💡", msg: "Based on your performance pattern, booking a Math tutor session could help you recover 5–8 points before finals.", time: "2 hours ago" },
+    { type: "info", icon: "📅", msg: "Your advisor Dr. Martinez has requested a check-in meeting. Check your email for a scheduling link.", time: "1 hour ago" },
+    { type: "success", icon: "🎯", msg: "Great work in Python! Your score of 91 is above the class average of 83.", time: "Yesterday" },
+  ],
+};
+
+const advisorData = {
+  name: "Dr. Elena Martinez", email: "e.martinez@college.edu", avatar: "EM",
+  department: "Academic Advising", students: [
+    { name: "Jordan Reyes",    id: "STU-2024-0847", gpa: 2.8,  risk: "High",   riskPct: 78, change: -0.4, alerts: 2 },
+    { name: "Aaliyah Thompson",id: "STU-2024-0312", gpa: 2.5,  risk: "High",   riskPct: 82, change: -0.6, alerts: 3 },
+    { name: "Marcus Chen",     id: "STU-2024-0556", gpa: 3.1,  risk: "Medium", riskPct: 45, change: -0.2, alerts: 1 },
+    { name: "Priya Sharma",    id: "STU-2024-0729", gpa: 3.7,  risk: "Low",    riskPct: 12, change: +0.1, alerts: 0 },
+    { name: "Ethan Williams",  id: "STU-2024-0891", gpa: 3.4,  risk: "Low",    riskPct: 18, change:  0.0, alerts: 0 },
+    { name: "Sofia Gonzalez",  id: "STU-2024-0133", gpa: 2.9,  risk: "Medium", riskPct: 55, change: -0.3, alerts: 1 },
+    { name: "Isaiah Parker",   id: "STU-2024-0467", gpa: 3.2,  risk: "Low",    riskPct: 22, change: +0.2, alerts: 0 },
+    { name: "Mei Lin",         id: "STU-2024-0981", gpa: 3.9,  risk: "Low",    riskPct: 8,  change: +0.3, alerts: 0 },
+  ],
+  riskCounts: { High: 2, Medium: 2, Low: 4 },
+  retention: 88,
+  avgGpa: 3.19,
+};
+
+// ── APP STATE ───────────────────────────────────────────────
+let currentRole = null;
+let currentPage = null;
+let charts = {};
+
+// ── LOGIN / LOGOUT ──────────────────────────────────────────
+function login(role) {
+  currentRole = role;
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  setupSidebar(role);
+  navigateTo(role === 'student' ? 'overview' : 'students');
+}
+
+function logout() {
+  currentRole = null;
+  Object.values(charts).forEach(c => c.destroy());
+  charts = {};
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+}
+
+// ── SIDEBAR ─────────────────────────────────────────────────
+function setupSidebar(role) {
+  const data = role === 'student' ? studentData : advisorData;
+  document.getElementById('sidebar-name').textContent = data.name;
+  document.getElementById('sidebar-email').textContent = data.email;
+  document.getElementById('sidebar-avatar').textContent = data.avatar;
+  document.getElementById('sidebar-role-label').textContent = role === 'student' ? 'Student Portal' : 'Advisor Portal';
+
+  const navItems = role === 'student'
+    ? [
+        { id: 'overview',    icon: '📊', label: 'Overview' },
+        { id: 'courses',     icon: '📚', label: 'My Courses' },
+        { id: 'assignments', icon: '📝', label: 'Assignments' },
+        { id: 'alerts',      icon: '🔔', label: 'Alerts', notif: true },
+      ]
+    : [
+        { id: 'students',  icon: '👥', label: 'All Students' },
+        { id: 'at-risk',   icon: '⚠️', label: 'At-Risk Students', notif: true },
+        { id: 'analytics', icon: '📈', label: 'Class Analytics' },
+      ];
+
+  document.getElementById('sidebar-nav').innerHTML = navItems.map(n => `
+    <div class="nav-item" id="nav-${n.id}" onclick="navigateTo('${n.id}')">
+      <span class="nav-icon">${n.icon}</span>
+      <span>${n.label}</span>
+      ${n.notif ? '<span class="notif-dot"></span>' : ''}
+    </div>
+  `).join('');
+}
+
+function navigateTo(page) {
+  currentPage = page;
+  document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+  const navEl = document.getElementById('nav-' + page);
+  if (navEl) navEl.classList.add('active');
+
+  // Destroy old charts
+  Object.values(charts).forEach(c => c.destroy());
+  charts = {};
+
+  const main = document.getElementById('main-content');
+  if (currentRole === 'student') {
+    if (page === 'overview')    main.innerHTML = renderStudentOverview();
+    if (page === 'courses')     main.innerHTML = renderStudentCourses();
+    if (page === 'assignments') main.innerHTML = renderAssignments();
+    if (page === 'alerts')      main.innerHTML = renderAlerts();
+  } else {
+    if (page === 'students')   main.innerHTML = renderAdvisorStudents();
+    if (page === 'at-risk')    main.innerHTML = renderAtRisk();
+    if (page === 'analytics')  main.innerHTML = renderAnalytics();
+  }
+
+  requestAnimationFrame(() => initCharts(page));
+}
+
+// ── STUDENT PAGES ───────────────────────────────────────────
+function renderStudentOverview() {
+  const d = studentData;
+  return `
+    <div class="page-header">
+      <div>
+        <h2>Good morning, Jordan 👋</h2>
+        <p>${d.semester} · Student ID: ${d.id}</p>
+      </div>
+      <button class="btn btn-navy btn-sm" onclick="navigateTo('alerts')">🔔 2 New Alerts</button>
+    </div>
+
+    <div class="stat-grid">
+      <div class="stat-card navy">
+        <div class="stat-label">Current GPA</div>
+        <div class="stat-value">${d.gpa}</div>
+        <div class="stat-sub">↓ 0.3 from last semester</div>
+      </div>
+      <div class="stat-card red">
+        <div class="stat-label">Risk Level</div>
+        <div class="stat-value" style="font-size:1.4rem;color:var(--red)">${d.riskScore}</div>
+        <div class="stat-sub">AI confidence: ${d.riskPct}%</div>
+      </div>
+      <div class="stat-card orange">
+        <div class="stat-label">Missing Work</div>
+        <div class="stat-value">2</div>
+        <div class="stat-sub">MATH 202 assignments</div>
+      </div>
+      <div class="stat-card green">
+        <div class="stat-label">Best Course</div>
+        <div class="stat-value" style="font-size:1.3rem;color:var(--green)">CIS 110</div>
+        <div class="stat-sub">Grade: 91 · Above avg</div>
+      </div>
+    </div>
+
+    <div class="grid-3-2">
+      <div class="card">
+        <div class="card-title">Overall Grade Trend — Last 8 Weeks</div>
+        <div class="chart-wrap"><canvas id="trendChart"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-title">AI Risk Assessment</div>
+        <div class="risk-meter">
+          <div style="margin:1rem 0 0.5rem">
+            <div class="risk-label high">${d.riskScore} Risk</div>
+            <div style="font-size:0.7rem;color:var(--muted);margin-top:0.2rem">AI Score: ${d.riskPct}/100</div>
+          </div>
+          <div style="background:var(--border);border-radius:99px;height:10px;margin:0.75rem 0">
+            <div style="width:${d.riskPct}%;height:100%;border-radius:99px;background:linear-gradient(90deg,var(--orange),var(--red));transition:width 0.5s"></div>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:0.65rem;color:var(--muted)">
+            <span>Low</span><span>Medium</span><span>High</span>
+          </div>
+          <div style="margin-top:1rem">
+            <div class="alert-item alert-warn">
+              <div class="alert-icon">💡</div>
+              <div class="alert-text">
+                <p>Improving your Calculus grade by 8 points would move you to Medium risk.</p>
+                <span>AI recommendation</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title">Course Performance</div>
+        ${d.courses.map(c => `
+          <div class="course-item">
+            <div class="course-dot" style="background:${c.color}"></div>
+            <div class="course-name">${c.name}<br><span style="font-size:0.68rem;color:var(--muted);font-weight:400">${c.code}</span></div>
+            <div class="course-grade-bar">
+              <div class="course-grade-fill" style="width:${c.grade}%;background:${c.color}"></div>
+            </div>
+            <div class="course-grade-text">${c.grade}</div>
+            <div class="course-trend ${c.trend > 0 ? 'trend-up' : c.trend < 0 ? 'trend-down' : 'trend-flat'}">
+              ${c.trend > 0 ? '▲' : c.trend < 0 ? '▼' : '—'} ${Math.abs(c.trend)}
+            </div>
+          </div>
+        `).join('')}
+      </div>
+      <div class="card">
+        <div class="card-title">AI Recommendations</div>
+        ${d.alerts.map(a => `
+          <div class="alert-item alert-${a.type}">
+            <div class="alert-icon">${a.icon}</div>
+            <div class="alert-text"><p>${a.msg}</p><span>${a.time}</span></div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+}
+
+function renderStudentCourses() {
+  const d = studentData;
+  return `
+    <div class="page-header">
+      <div><h2>My Courses</h2><p>${d.semester}</p></div>
+    </div>
+    <div class="grid-2">
+      ${d.courses.map(c => `
+        <div class="card" style="border-top:3px solid ${c.color}">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem">
+            <div>
+              <div style="font-weight:700;font-size:0.95rem;color:var(--dark)">${c.name}</div>
+              <div style="font-size:0.72rem;color:var(--muted);margin-top:0.1rem">${c.code}</div>
+            </div>
+            <div style="text-align:right">
+              <div style="font-size:1.6rem;font-weight:700;color:${c.color};letter-spacing:-0.04em">${c.grade}</div>
+              <div style="font-size:0.68rem;color:var(--muted)">current grade</div>
+            </div>
+          </div>
+          <div style="background:var(--border);border-radius:99px;height:6px;margin-bottom:0.75rem;overflow:hidden">
+            <div style="width:${c.grade}%;height:100%;background:${c.color};border-radius:99px"></div>
+          </div>
+          <div style="display:flex;gap:1rem;font-size:0.75rem;color:var(--muted)">
+            <span>Previous: <strong style="color:var(--dark)">${c.prev}</strong></span>
+            <span>Change: <strong style="color:${c.trend >= 0 ? 'var(--green)' : 'var(--red)'}">${c.trend >= 0 ? '+' : ''}${c.trend}</strong></span>
+          </div>
+        </div>
+      `).join('')}
+    </div>
+    <div class="card">
+      <div class="card-title">Grade Comparison by Course</div>
+      <div class="chart-wrap"><canvas id="courseChart"></canvas></div>
+    </div>
+  `;
+}
+
+function renderAssignments() {
+  const d = studentData;
+  const missing = d.assignments.filter(a => a.status === 'Missing').length;
+  return `
+    <div class="page-header">
+      <div><h2>Assignments</h2><p>All courses · ${d.semester}</p></div>
+      ${missing > 0 ? `<span class="status-pill pill-red">${missing} Missing</span>` : ''}
+    </div>
+    <div class="card">
+      <table class="assign-table">
+        <thead>
+          <tr>
+            <th>Assignment</th>
+            <th>Course</th>
+            <th>Due Date</th>
+            <th>Status</th>
+            <th>Score</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${d.assignments.map(a => `
+            <tr>
+              <td style="font-weight:600">${a.name}</td>
+              <td style="color:var(--muted);font-family:'DM Mono',monospace;font-size:0.75rem">${a.course}</td>
+              <td style="color:var(--muted)">${a.due}</td>
+              <td><span class="status-pill ${a.status === 'Submitted' ? 'pill-green' : a.status === 'Missing' ? 'pill-red' : 'pill-yellow'}">${a.status}</span></td>
+              <td style="font-family:'DM Mono',monospace;font-size:0.78rem">${a.score || '—'}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+function renderAlerts() {
+  return `
+    <div class="page-header">
+      <div><h2>Alerts & Recommendations</h2><p>AI-generated insights for your performance</p></div>
+    </div>
+    <div class="card" style="max-width:680px">
+      <div class="card-title">Recent Alerts</div>
+      ${studentData.alerts.map(a => `
+        <div class="alert-item alert-${a.type}" style="margin-bottom:0.75rem">
+          <div class="alert-icon" style="font-size:1.3rem">${a.icon}</div>
+          <div class="alert-text"><p style="font-size:0.86rem">${a.msg}</p><span>${a.time}</span></div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+// ── ADVISOR PAGES ───────────────────────────────────────────
+function renderAdvisorStudents() {
+  const d = advisorData;
+  return `
+    <div class="page-header">
+      <div><h2>All Students</h2><p>${d.department} · Spring 2025</p></div>
+    </div>
+    <div class="stat-grid">
+      <div class="stat-card navy">
+        <div class="stat-label">Total Students</div>
+        <div class="stat-value">${d.students.length}</div>
+        <div class="stat-sub">Under your advising</div>
+      </div>
+      <div class="stat-card red">
+        <div class="stat-label">High Risk</div>
+        <div class="stat-value">${d.riskCounts.High}</div>
+        <div class="stat-sub">Immediate attention needed</div>
+      </div>
+      <div class="stat-card orange">
+        <div class="stat-label">Medium Risk</div>
+        <div class="stat-value">${d.riskCounts.Medium}</div>
+        <div class="stat-sub">Monitor closely</div>
+      </div>
+      <div class="stat-card green">
+        <div class="stat-label">Avg GPA</div>
+        <div class="stat-value">${d.avgGpa}</div>
+        <div class="stat-sub">Class average</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Student Roster</div>
+      <table class="student-table">
+        <thead>
+          <tr>
+            <th>Student</th>
+            <th>GPA</th>
+            <th>Risk Level</th>
+            <th>Risk Score</th>
+            <th>GPA Change</th>
+            <th>Alerts</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${d.students.map(s => `
+            <tr>
+              <td>
+                <div class="student-name">${s.name}</div>
+                <div class="student-id">${s.id}</div>
+              </td>
+              <td style="font-family:'DM Mono',monospace;font-weight:600">${s.gpa}</td>
+              <td><span class="risk-pill risk-${s.risk.toLowerCase()}">${s.risk}</span></td>
+              <td>
+                <div style="display:flex;align-items:center;gap:0.5rem">
+                  <div class="mini-bar"><div class="mini-fill" style="width:${s.riskPct}%;background:${s.risk==='High'?'var(--red)':s.risk==='Medium'?'var(--orange)':'var(--green)'}"></div></div>
+                  <span style="font-size:0.72rem;color:var(--muted);font-family:'DM Mono',monospace">${s.riskPct}</span>
+                </div>
+              </td>
+              <td style="font-size:0.8rem;color:${s.change>=0?'var(--green)':'var(--red)'};font-family:'DM Mono',monospace">
+                ${s.change >= 0 ? '+' : ''}${s.change.toFixed(1)}
+              </td>
+              <td>${s.alerts > 0 ? `<span class="status-pill pill-red">${s.alerts} alerts</span>` : '<span style="color:var(--muted);font-size:0.75rem">None</span>'}</td>
+              <td><button class="btn btn-outline btn-sm">Message</button></td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+function renderAtRisk() {
+  const d = advisorData;
+  const highRisk = d.students.filter(s => s.risk === 'High' || s.risk === 'Medium');
+  return `
+    <div class="page-header">
+      <div><h2>At-Risk Students</h2><p>Requires your attention — sorted by risk score</p></div>
+    </div>
+    ${highRisk.sort((a,b) => b.riskPct - a.riskPct).map(s => `
+      <div class="card" style="margin-bottom:1rem;border-left:4px solid ${s.risk==='High'?'var(--red)':'var(--orange)'}">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem">
+          <div style="display:flex;align-items:center;gap:1rem">
+            <div style="width:42px;height:42px;border-radius:50%;background:${s.risk==='High'?'#fee2e2':'#fef3c7'};display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.85rem;color:${s.risk==='High'?'#991b1b':'#92400e'}">
+              ${s.name.split(' ').map(n=>n[0]).join('')}
+            </div>
+            <div>
+              <div style="font-weight:700;font-size:0.95rem">${s.name}</div>
+              <div style="font-size:0.72rem;color:var(--muted);font-family:'DM Mono',monospace">${s.id}</div>
+            </div>
+          </div>
+          <div style="display:flex;gap:2rem;flex-wrap:wrap">
+            <div style="text-align:center">
+              <div style="font-size:1.4rem;font-weight:700;color:${s.risk==='High'?'var(--red)':'var(--orange)'}">${s.riskPct}</div>
+              <div style="font-size:0.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.07em">Risk Score</div>
+            </div>
+            <div style="text-align:center">
+              <div style="font-size:1.4rem;font-weight:700;color:var(--dark)">${s.gpa}</div>
+              <div style="font-size:0.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.07em">GPA</div>
+            </div>
+            <div style="text-align:center">
+              <div style="font-size:1.4rem;font-weight:700;color:var(--red)">${s.alerts}</div>
+              <div style="font-size:0.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.07em">Alerts</div>
+            </div>
+          </div>
+          <div style="display:flex;gap:0.5rem">
+            <button class="btn btn-navy btn-sm">Send Message</button>
+            <button class="btn btn-outline btn-sm">Schedule Meeting</button>
+          </div>
+        </div>
+        <div style="margin-top:0.75rem;background:var(--border);border-radius:99px;height:6px;overflow:hidden">
+          <div style="width:${s.riskPct}%;height:100%;border-radius:99px;background:${s.risk==='High'?'var(--red)':'var(--orange)'}"></div>
+        </div>
+      </div>
+    `).join('')}
+  `;
+}
+
+function renderAnalytics() {
+  const d = advisorData;
+  return `
+    <div class="page-header">
+      <div><h2>Class Analytics</h2><p>Spring 2025 · ${d.students.length} students</p></div>
+    </div>
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title">Risk Distribution</div>
+        <div class="chart-wrap-sm"><canvas id="riskChart"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-title">GPA Distribution</div>
+        <div class="chart-wrap-sm"><canvas id="gpaChart"></canvas></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Class Risk Scores — All Students</div>
+      <div class="chart-wrap"><canvas id="allRiskChart"></canvas></div>
+    </div>
+    <div class="stat-grid" style="margin-top:1.25rem">
+      <div class="stat-card green">
+        <div class="stat-label">Retention Rate</div>
+        <div class="stat-value">${d.retention}%</div>
+        <div class="stat-sub">On track to complete</div>
+      </div>
+      <div class="stat-card blue">
+        <div class="stat-label">Average GPA</div>
+        <div class="stat-value">${d.avgGpa}</div>
+        <div class="stat-sub">Class average</div>
+      </div>
+      <div class="stat-card orange">
+        <div class="stat-label">Needing Support</div>
+        <div class="stat-value">${d.riskCounts.High + d.riskCounts.Medium}</div>
+        <div class="stat-sub">High or medium risk</div>
+      </div>
+      <div class="stat-card navy">
+        <div class="stat-label">On Track</div>
+        <div class="stat-value">${d.riskCounts.Low}</div>
+        <div class="stat-sub">Low risk students</div>
+      </div>
+    </div>
+  `;
+}
+
+// ── CHARTS ──────────────────────────────────────────────────
+function initCharts(page) {
+  const baseOpts = {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+  };
+
+  if (page === 'overview') {
+    const ctx = document.getElementById('trendChart');
+    if (ctx) {
+      charts.trend = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: studentData.labels,
+          datasets: [{
+            data: studentData.weeklyGrades,
+            borderColor: '#EF4444', backgroundColor: 'rgba(239,68,68,0.08)',
+            borderWidth: 2.5, fill: true, tension: 0.4, pointRadius: 4,
+            pointBackgroundColor: '#EF4444', pointBorderColor: '#fff', pointBorderWidth: 2
+          }]
+        },
+        options: { ...baseOpts,
+          scales: {
+            y: { min: 55, max: 95, grid: { color: '#f0f0f0' }, ticks: { font: { family: 'DM Mono', size: 10 } } },
+            x: { grid: { display: false }, ticks: { font: { size: 10 }, maxRotation: 30 } }
+          },
+          plugins: { tooltip: { callbacks: { label: ctx => `Grade: ${ctx.raw}` } }, legend: { display: false } }
+        }
+      });
+    }
+  }
+
+  if (page === 'courses') {
+    const ctx = document.getElementById('courseChart');
+    if (ctx) {
+      charts.course = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: studentData.courses.map(c => c.name),
+          datasets: [
+            { label: 'Current', data: studentData.courses.map(c => c.grade), backgroundColor: studentData.courses.map(c => c.color), borderRadius: 6, barPercentage: 0.5 },
+            { label: 'Previous', data: studentData.courses.map(c => c.prev), backgroundColor: 'rgba(90,100,128,0.15)', borderRadius: 6, barPercentage: 0.5 }
+          ]
+        },
+        options: { ...baseOpts,
+          plugins: { legend: { display: true, labels: { font: { size: 11, family: 'Sora' }, boxWidth: 12 } } },
+          scales: {
+            y: { min: 50, max: 100, grid: { color: '#f0f0f0' }, ticks: { font: { family: 'DM Mono', size: 10 } } },
+            x: { grid: { display: false }, ticks: { font: { size: 10 } } }
+          }
+        }
+      });
+    }
+  }
+
+  if (page === 'analytics') {
+    const riskCtx = document.getElementById('riskChart');
+    if (riskCtx) {
+      charts.risk = new Chart(riskCtx, {
+        type: 'doughnut',
+        data: {
+          labels: ['High Risk', 'Medium Risk', 'Low Risk'],
+          datasets: [{ data: [2, 2, 4], backgroundColor: ['#EF4444','#F59E0B','#10B981'], borderWidth: 0 }]
+        },
+        options: { ...baseOpts, cutout: '65%',
+          plugins: { legend: { display: true, position: 'bottom', labels: { font: { size: 11, family: 'Sora' }, boxWidth: 12 } } }
+        }
+      });
+    }
+    const gpaCtx = document.getElementById('gpaChart');
+    if (gpaCtx) {
+      charts.gpa = new Chart(gpaCtx, {
+        type: 'bar',
+        data: {
+          labels: advisorData.students.map(s => s.name.split(' ')[0]),
+          datasets: [{ data: advisorData.students.map(s => s.gpa), backgroundColor: advisorData.students.map(s => s.risk==='High'?'#EF4444':s.risk==='Medium'?'#F59E0B':'#10B981'), borderRadius: 6 }]
+        },
+        options: { ...baseOpts,
+          scales: {
+            y: { min: 2, max: 4, grid: { color: '#f0f0f0' }, ticks: { font: { family: 'DM Mono', size: 10 } } },
+            x: { grid: { display: false }, ticks: { font: { size: 10 } } }
+          }
+        }
+      });
+    }
+    const allRiskCtx = document.getElementById('allRiskChart');
+    if (allRiskCtx) {
+      charts.allRisk = new Chart(allRiskCtx, {
+        type: 'bar',
+        data: {
+          labels: advisorData.students.sort((a,b)=>b.riskPct-a.riskPct).map(s => s.name.split(' ')[0]),
+          datasets: [{ data: advisorData.students.sort((a,b)=>b.riskPct-a.riskPct).map(s => s.riskPct), backgroundColor: advisorData.students.sort((a,b)=>b.riskPct-a.riskPct).map(s => s.risk==='High'?'#EF4444':s.risk==='Medium'?'#F59E0B':'#10B981'), borderRadius: 6 }]
+        },
+        options: { ...baseOpts,
+          scales: {
+            y: { min: 0, max: 100, grid: { color: '#f0f0f0' }, ticks: { font: { family: 'DM Mono', size: 10 }, callback: v => v + '%' } },
+            x: { grid: { display: false }, ticks: { font: { size: 10 } } }
+          }
+        }
+      });
+    }
+  }
+}
+</script>
+</body>
+</html>
